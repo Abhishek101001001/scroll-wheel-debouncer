@@ -12,7 +12,7 @@ A software-only fix for erratic mouse scroll wheel behavior caused by worn encod
 
 | Version | File | Best for |
 |---------|------|----------|
-| **v3.4 (latest)** | [`scroll_fix_v3.4.ahk`](./scroll_fix_v3.4.ahk) | Everyone — use this |
+| **v3.4 (latest)** | [`scroll_fix_v3.ahk`](./scroll_fix_v3.ahk) | Everyone — use this |
 | v1 (original) | [`scroll_fix_final.ahk`](./scroll_fix_final.ahk) | Simple, no UI, works too |
 
 ---
