@@ -276,7 +276,6 @@ ToggleDirection(*) {
     if (A_TimeSinceThisHotkey < 400) {
         SaveAppDir()
         lockedDir := (lockedDir = "DOWN") ? "UP" : "DOWN"
-        ShowDirectionTooltip()
         UpdateOverlay()
         UpdateTray()
     }
@@ -304,7 +303,6 @@ CheckDoubleTap(dir) {
     if (lastWheelDir = dir and (now - lastWheelTs) < Integer(doubleTapMs)) {
         if (dirLockMode) {
             lockedDir := (lockedDir = "DOWN") ? "UP" : "DOWN"
-            ShowDirectionTooltip()
             UpdateOverlay()
             UpdateTray()
         }
