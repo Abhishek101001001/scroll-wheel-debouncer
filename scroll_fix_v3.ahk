@@ -1,10 +1,14 @@
 ; ============================================================
-; Scroll Wheel Debouncer v3.4
+; Scroll Wheel Debouncer v3.5
 ; ============================================================
-; FIXES v3.3:
+; NEW in v3.5:
+;   - All settings persist across reboots via INI file
+;   - wornEncoderMode, dirLockMode, showOverlay saved immediately
+;     when toggled — no longer reset on next boot
+; v3.5:
 ;   - Moved WheelUp/WheelDown hotkey blocks to TOP of file
 ;     (AHK v2 requires hotkey blocks before function definitions)
-; NEW in v3.4:
+; NEW in v3.5:
 ;   - Worn Encoder Sleep Mode (Ctrl+Alt+W to toggle)
 ;     Adds Sleep() in discard branch only — gives M150-class
 ;     worn encoders the hard dead zone v2 had, without slowing
@@ -21,10 +25,6 @@ global maxCN          := 3
 global backoffStep    := 1
 global decayEvery     := 1
 
-; ── Worn Encoder Mode ─────────────────────────────────────────
-global wornEncoderMode := false   ; toggle with Ctrl+Alt+W
-global wornSleepMs     := 130     ; 100-200ms; 200 = v2 behaviour
-
 ; ── User settings (saved to INI) ──────────────────────────────
 global iniFile        := A_ScriptDir . "\scroll_debouncer.ini"
 global toggleHotkey   := LoadSetting("toggleHotkey",   "MButton")
@@ -34,8 +34,15 @@ global autoDetect     := LoadSetting("autoDetect",      "1") = "1"
 global doubleTapMs    := LoadSetting("doubleTapMs",     "300")
 global defaultDir     := LoadSetting("defaultDir",      "DOWN")
 
+; ── Worn Encoder Mode ─────────────────────────────────────────
+global wornSleepMs     := Integer(LoadSetting("wornSleepMs", "130"))
+global wornEncoderMode := LoadSetting("wornEncoderMode", "0") = "1"
+
+; ── Persisted mode state ──────────────────────────────────────
+global _dirLockModeSaved := LoadSetting("dirLockMode", "0") = "1"
+
 ; ── Runtime state ─────────────────────────────────────────────
-global dirLockMode    := false
+global dirLockMode    := _dirLockModeSaved
 global lockedDir      := defaultDir
 global middleHeld     := false
 global lastDir        := ""
@@ -110,7 +117,7 @@ WheelUp:: {
     ; ── Normal Mode ───────────────────────────────────────
     now := A_TickCount
     if (lastSentDir = "DOWN" and lastSentTs > 0 and (now - lastSentTs) < reverseBlockMs) {
-        ; ── v3.4: Worn Encoder Sleep (discard branch only) ──
+        ; ── v3.5: Worn Encoder Sleep (discard branch only) ──
         if (wornEncoderMode)
             Sleep(wornSleepMs)
         sessionPhantoms++
@@ -280,12 +287,13 @@ ToggleDirection(*) {
 ToggleWornMode(*) {
     global wornEncoderMode, wornSleepMs
     wornEncoderMode := !wornEncoderMode
+    SaveSetting("wornEncoderMode", wornEncoderMode ? "1" : "0")
     UpdateTray()
     UpdateOverlay()
     label := wornEncoderMode
         ? "🟠 Worn Encoder Mode ON  (Sleep " . wornSleepMs . "ms)"
         : "🟢 Worn Encoder Mode OFF"
-    TrayTip(label, "Scroll Debouncer v3.4", 2)
+    TrayTip(label, "Scroll Debouncer v3.5", 2)
 }
 
 ; ── Double-tap ────────────────────────────────────────────────
@@ -480,7 +488,7 @@ UpdateTray() {
 
     A_IconTip := dirLockMode
         ? "🔒 Scroll Debouncer — Lock: " . lockedDir
-        : (wornEncoderMode ? "🟠 Scroll Debouncer — Worn Mode" : "● Scroll Debouncer v3.4")
+        : (wornEncoderMode ? "🟠 Scroll Debouncer — Worn Mode" : "● Scroll Debouncer v3.5")
 }
 
 ToggleMode(*) {
@@ -488,6 +496,7 @@ ToggleMode(*) {
     dirLockMode := !dirLockMode
     if (dirLockMode)
         lockedDir := defaultDir
+    SaveSetting("dirLockMode", dirLockMode ? "1" : "0")
     UpdateTray()
     UpdateOverlay()
 }
@@ -513,7 +522,7 @@ OpenSettings(*) {
     idleEdit := settingsGui.Add("Edit", "x+10 w60", idleResetSecs)
     settingsGui.Add("Text", "x+5", "seconds")
 
-    settingsGui.Add("GroupBox", "x10 y+15 w380 h60", "Worn Encoder Mode (v3.4)")
+    settingsGui.Add("GroupBox", "x10 y+15 w380 h60", "Worn Encoder Mode (v3.5)")
     settingsGui.Add("Text", "xp+10 yp+25", "Sleep after phantom discard (ms):")
     wornEdit := settingsGui.Add("Edit", "x+10 w60", wornSleepMs)
     settingsGui.Add("Text", "x+5", "(100-200; 200=v2 behaviour)")
@@ -555,13 +564,15 @@ SaveSettings(hk, dt, idle, worn, overlay, auto, defDir, gui) {
     autoDetect    := auto = 1
     defaultDir    := defDir
 
-    SaveSetting("toggleHotkey",  hk)
-    SaveSetting("doubleTapMs",   dt)
-    SaveSetting("idleResetSecs", idle)
-    SaveSetting("wornSleepMs",   worn)
-    SaveSetting("showOverlay",   overlay)
-    SaveSetting("autoDetect",    auto)
-    SaveSetting("defaultDir",    defDir)
+    SaveSetting("toggleHotkey",   hk)
+    SaveSetting("doubleTapMs",    dt)
+    SaveSetting("idleResetSecs",  idle)
+    SaveSetting("wornSleepMs",    worn)
+    SaveSetting("wornEncoderMode", wornEncoderMode ? "1" : "0")
+    SaveSetting("showOverlay",    overlay = 1 ? "1" : "0")
+    SaveSetting("autoDetect",     auto = 1 ? "1" : "0")
+    SaveSetting("defaultDir",     defDir)
+    SaveSetting("dirLockMode",    dirLockMode ? "1" : "0")
 
     gui.Destroy()
 
@@ -570,7 +581,7 @@ SaveSettings(hk, dt, idle, worn, overlay, auto, defDir, gui) {
     else if (overlayGui != "")
         try overlayGui.Destroy()
 
-    TrayTip("Settings saved", "Scroll Debouncer v3.4", 2)
+    TrayTip("Settings saved", "Scroll Debouncer v3.5", 2)
 }
 
 ; ── Direction tooltip ─────────────────────────────────────────
@@ -593,7 +604,7 @@ ShowStats(*) {
     mode    := dirLockMode ? "🔒 Direction Lock" : "● Normal (adaptive)"
     worn    := wornEncoderMode ? "ON (" . wornSleepMs . "ms)" : "OFF"
     MsgBox(
-        "Scroll Debouncer v3.4 — Session Stats`n`n" .
+        "Scroll Debouncer v3.5 — Session Stats`n`n" .
         "Mode:             " . mode . "`n" .
         "Worn Encoder Mode: " . worn . "`n" .
         "Duration:         " . elapsed . "s`n" .
@@ -602,7 +613,7 @@ ShowStats(*) {
         "Phantom rate:     " . rate . "%`n" .
         "Current CN:       " . cnCurrent . " (base=" . baseCN . ")`n`n" .
         "Encoder health:   " . health,
-        "Scroll Debouncer v3.4"
+        "Scroll Debouncer v3.5"
     )
 }
 
