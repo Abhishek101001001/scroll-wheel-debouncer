@@ -1,34 +1,32 @@
 # Scroll Wheel Debouncer
 
-A software-only fix for erratic mouse scroll wheel behavior caused by worn encoder hardware. No disassembly required. Built and tuned using real hardware data captured from faulty Logitech mice.
+A software-only fix for erratic/bouncing Logitech scroll wheel behavior caused by worn encoder hardware. No disassembly required. Built and tuned using real hardware data captured from faulty Logitech mice.
 
-**Tested on:** Logitech G102, Logitech M150
-**Platform:** Windows (AutoHotkey v2)
-**Status:** v3.4 — fully working, 0 phantom flips on healthy encoders, Direction Lock mode for heavily worn encoders
-
----
-
-## ⬇️ Download
-
-| Version | File | Best for |
-|---------|------|----------|
-| **v3.5.1 (latest)** | [`scroll_fix_v3.ahk`](./scroll_fix_v3.ahk) | Everyone — use this |
-| v1 (original) | [`scroll_fix_final.ahk`](./scroll_fix_final.ahk) | Simple, no UI, works too |
+**Tested on:** Logitech G102, Logitech M150  
+**Platform:** Windows (AutoHotkey v2)  
+**Latest:** v3.6
 
 ---
 
-## What's new in v3.4
+## Download
 
-- **Worn Encoder Sleep Mode** (`Ctrl+Alt+W`) — adds a configurable sleep only in the phantom-discard branch, giving heavily worn encoders the hard dead zone that v1's `Sleep(200ms)` approach provided, without slowing down good scroll events
-- **Direction Lock Mode** — middle-click cycles UP / DOWN / OFF; turns a nearly dead encoder into a usable mouse
-- **Adaptive backoff CN** — self-tightening/relaxing filter, no `Sleep()` in the forward-scroll path
-- **Persistent overlay** — top-right corner shows current mode at all times
-- **Auto-detect encoder health** — first 60 seconds measures phantom rate and suggests best mode
-- **Per-app direction memory** — remembers your preferred scroll direction per application
-- **Custom hotkey picker** — change any hotkey from Settings GUI
-- **Colour-coded tray icon** — green (healthy) / yellow (moderate wear) / orange (worn mode on) / red (heavy wear)
-- **Session stats** — phantom rate, encoder health rating, saved to CSV on exit
-- **Bug fix:** Moved WheelUp/WheelDown hotkey blocks before function definitions — fixes AHK v2 "Hotkeys not allowed inside functions" crash
+| Version | File | Notes |
+|---------|------|-------|
+| **v3.6 (latest)** | [`scroll_fix_v3.ahk`](./scroll_fix_v3.ahk) | Use this |
+| v1 (original) | [`scroll_fix_final.ahk`](./scroll_fix_final.ahk) | Simple, no UI |
+
+---
+
+## Quick start
+
+### Requirements
+- Windows
+- [AutoHotkey v2](https://www.autohotkey.com/download/)
+
+### Installation
+1. Download `scroll_fix_v3.ahk`
+2. Double-click to run — tray icon confirms it's active
+3. Auto-start on boot: press `Win+R` → type `shell:startup` → place a shortcut to the `.ahk` file there
 
 ---
 
@@ -45,95 +43,130 @@ This script intercepts scroll input system-wide and filters out the hardware noi
 
 ---
 
-## Quick start
+## Features
 
-### Requirements
+### Normal Mode (default)
+Adaptive phantom filtering — self-tightening/relaxing based on how many phantoms your encoder is firing. Works silently in the background. Best for healthy or lightly worn encoders.
 
-- Windows
-- [AutoHotkey v2](https://www.autohotkey.com/download/)
+### Direction Lock Mode
+For heavily worn encoders that can't be reliably fixed by filtering alone.
 
-### Installation
+- Locks scroll to **one direction only**
+- **Tap** the toggle button → flip locked direction (UP ↔ DOWN)
+- **Hold** the toggle button → free scroll in both directions while held, lock resumes on release
+- Enable from tray icon → Direction Lock Mode
 
-1. Download `scroll_fix_v3.ahk`
-2. Double-click to run — a tray icon confirms it's active
-3. To auto-start on boot: press `Win+R`, type `shell:startup`, place a shortcut to the `.ahk` file there
+### Worn Encoder Sleep Mode
+Press `Ctrl+Alt+W` to toggle. Adds a configurable sleep only in the phantom-discard branch — gives heavily worn encoders the hard dead zone that the original v1 approach had, without slowing down good scroll events.
 
-### Hotkeys
+Default sleep: 130ms. Range: 100–200ms (200ms = v1 behaviour).
+
+---
+
+## Hotkeys
 
 | Hotkey | Action |
 |--------|--------|
-| `Middle Click` | Toggle direction (in Lock mode) / hold for free scroll |
+| Middle Click (tap) | Flip locked direction (Direction Lock mode only) |
+| Middle Click (hold) | Free scroll while held (Direction Lock mode only) |
 | `Ctrl+Alt+W` | Toggle Worn Encoder Mode on/off |
-| `Ctrl+Alt+S` | Toggle script on/off |
-| `Ctrl+Alt+O` | Toggle overlay |
+
+Toggle hotkey is fully customizable from Settings.
+
+---
+
+## Settings
+
+Right-click tray icon → **⚙ Settings**
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| Toggle hotkey | MButton | Button for direction flip / free scroll |
+| Double-tap ms | 300 | Double-tap scroll speed to flip direction |
+| Idle auto-reset | 0 (off) | Reset direction after N seconds idle |
+| Worn encoder sleep | 130ms | Sleep duration in discard branch |
+| Show overlay | ON | Top-right corner mode indicator |
+| Show tooltips | ON | Cursor tooltip on direction flip / free scroll |
+| Auto-detect health | ON | Measure phantom rate for 60s on startup |
+| Default direction | DOWN | Direction on startup / idle reset |
+
+All settings persist across reboots.
+
+---
+
+## Overlay
+
+A small indicator sits in the top-right corner showing current mode:
+
+| Display | Meaning |
+|---------|---------|
+| `● NORMAL` | Normal adaptive mode |
+| `↓ DOWN` | Direction Lock — locked to scroll down |
+| `↑ UP` | Direction Lock — locked to scroll up |
+| `● NORMAL [WORN]` | Normal mode + Worn Encoder Mode on |
 
 ---
 
 ## Which mode should I use?
 
-| Encoder condition | Recommended mode |
-|-------------------|-----------------|
-| Healthy / light wear | Normal mode, Worn Mode OFF |
-| Moderate wear | Normal mode, Worn Mode ON (`Ctrl+Alt+W`), `wornSleepMs=130` |
-| Heavy wear / barely usable | Direction Lock Mode (middle-click to toggle) |
-| Dead encoder | Direction Lock — software can't fix fully dead hardware, replace the EC11 encoder (₹30–50) |
+| Encoder condition | Recommended |
+|-------------------|-------------|
+| Healthy / light wear | Normal mode |
+| Moderate wear | Normal mode + Worn Encoder Mode (`Ctrl+Alt+W`) |
+| Heavy wear | Direction Lock Mode |
+| Nearly dead | Direction Lock + consider replacing the EC11 encoder (₹30–50) |
 
 ---
 
 ## How it works
 
-### Layer 1 — time gate (`reverseBlockMs`)
+### Layer 1 — Time gate (`reverseBlockMs`)
+After sending a scroll event, any opposite-direction event arriving within `reverseBlockMs` milliseconds is suppressed. Catches fast single-event phantom flips.
 
-After sending a scroll event, any opposite-direction event arriving within `reverseBlockMs` milliseconds is suppressed. Handles fast single-event phantom flips.
+### Layer 2 — Direction buffer (adaptive CN)
+A direction change is only confirmed if the same new direction appears `CN` times in a row. CN self-adjusts — tightens when phantoms are detected, relaxes when scrolling is clean. Catches slow multi-event phantom bursts that arrive too far apart for the time gate alone.
 
-### Layer 2 — direction buffer (`consecutiveNeeded` / CN)
-
-A direction change is only confirmed if the same new direction appears `CN` times in a row. Catches slow multi-event phantom bursts that arrive too far apart for the time gate alone.
-
-### Layer 3 (v3.4) — Worn Encoder Sleep
-
-When Worn Encoder Mode is ON, a short `Sleep(wornSleepMs)` fires after discarding a phantom — creating a hard blocking window that catches medium-gap phantoms (110–200ms) that the timestamp approach misses. Sleep is **only** in the discard branch, never in the forward-scroll branch.
+### Layer 3 — Worn Encoder Sleep (optional)
+When Worn Encoder Mode is ON, a short `Sleep()` fires after discarding a phantom — creating a hard blocking window that catches medium-gap phantoms (110–200ms). Sleep is only in the discard branch, never in the forward-scroll branch.
 
 ---
 
 ## Tuning parameters
 
+Edit at the top of `scroll_fix_v3.ahk`:
+
 | Parameter | Default | What it does |
 |-----------|---------|--------------|
 | `reverseBlockMs` | 110 | Suppress opposite-direction events within this window (ms) |
 | `baseCN` | 2 | Starting consecutive-events threshold |
-| `maxCN` | 3 | Maximum CN (ceiling for adaptive backoff) |
-| `wornSleepMs` | 130 | Sleep duration in discard branch when Worn Mode is ON (100–200ms) |
-
-To edit: open the `.ahk` file in any text editor, change values at the top, save and re-run.
+| `maxCN` | 3 | Maximum CN ceiling |
+| `wornSleepMs` | 130 | Sleep in discard branch when Worn Mode is ON (100–200ms) |
 
 ---
 
-## Algorithm evolution
+## Algorithm history
 
-| Version | Approach | Phantom reduction |
-|---------|----------|-------------------|
-| v1 | Time gate only (125ms) | 98.9% |
-| v2 | Time gate + `Sleep(200ms)` in discard branch | 100% on test data, 200ms sluggishness |
-| v3 | Adaptive backoff CN, no Sleep() in hooks | ~99% on healthy encoder |
-| v3.1 | + `pendingCN` locked at `baseCN` — fixes direction-change stutter | — |
-| v3.2 | + Direction Lock Mode | Best option for dead encoders |
-| v3.3 | + Auto-detect, overlay, per-app memory, hotkey picker | — |
-| **v3.4** | **+ Worn Encoder Sleep Mode, AHK v2 hotkey crash fix** | **100% configurable** |
+| Version | What changed | Phantom reduction |
+|---------|-------------|-------------------|
+| v1 | Time gate only (200ms) + Sleep in hook | 100% on test data, sluggish |
+| v3.0 | Adaptive CN, no Sleep in forward path | ~99% healthy encoder |
+| v3.1 | pendingCN fix — no direction-change stutter | — |
+| v3.2 | Direction Lock Mode | Best for dead encoders |
+| v3.3 | Auto-detect, overlay, per-app memory, hotkey picker | — |
+| v3.4 | Worn Encoder Sleep Mode, AHK v2 crash fix | 100% configurable |
+| v3.5 | Settings persistence, direction lock blocking fix | — |
+| **v3.6** | **Tooltip control, free-scroll hold fix, full direction lock rewrite** | — |
 
 ---
 
 ## Results from hardware testing
 
-| Session | Events | Raw phantoms | Phantoms reaching apps | Reduction |
-|---------|--------|-------------|----------------------|-----------|
-| Baseline (no script) | 664 | 181 | 181 | — |
-| v1 (time gate 125ms) | 162 | 75 | 2 | 98.9% |
-| v2 (time gate + buffer, 125ms) | 162 | 75 | 14 | 92.3% |
-| v3 (time gate + buffer, 200ms) | 696 | 54 | 15 | 91.7% |
-| v1 final (n=3, 200ms) | 696 | 54 | 0 | 100% |
-| **v3.4 normal mode (G102)** | — | — | **0** | **100%** |
-| **v3.4 worn mode (M150)** | — | — | **0** | **100%** |
+| Session | Events | Phantoms blocked | Reduction |
+|---------|--------|-----------------|-----------|
+| Baseline (no script) | 664 | 0 | — |
+| v1 final (200ms gate + buffer) | 696 | 100% | 100% |
+| v3.6 Normal mode (G102) | — | 100% | 100% |
+| v3.6 Direction Lock (M150) | — | 100% | 100% |
 
 ---
 
@@ -141,7 +174,7 @@ To edit: open the `.ahk` file in any text editor, change values at the top, save
 
 | File | Description |
 |------|-------------|
-| `scroll_fix_v3.ahk` | Main script v3.4 — use this |
+| `scroll_fix_v3.ahk` | Main script v3.6 — use this |
 | `scroll_fix_final.ahk` | Original v1 — simple, no UI |
 | `scroll_logger.ahk` | Raw event capture tool for tuning |
 
@@ -149,7 +182,7 @@ To edit: open the `.ahk` file in any text editor, change values at the top, save
 
 ## Hardware note
 
-If your encoder is truly dead, software can only do so much. The EC11 encoder used in most Logitech mice costs ₹30–50 (~$0.50) and is a straightforward soldering job. Search "EC11 24-pulse encoder replacement" for guides.
+If your encoder is truly dead, software can only do so much. The EC11 encoder inside most Logitech mice costs ₹30–50 (~$0.50) and is a 20-minute soldering job. Search "EC11 24-pulse encoder replacement logitech" for guides.
 
 ---
 
